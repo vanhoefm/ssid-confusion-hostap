@@ -655,9 +655,20 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 	pos = resp->u.probe_resp.variable;
 	*pos++ = WLAN_EID_SSID;
-	*pos++ = hapd->conf->ssid.ssid_len;
-	os_memcpy(pos, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
-	pos += hapd->conf->ssid.ssid_len;
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->fakessid_len == 0) {
+#endif /* CONFIG_TESTING_OPTIONS */
+		printf("\n>>> Simulating MC-MITM: Overwriting SSID of outgoing Probe Response\n\n");
+		*pos++ = hapd->conf->ssid.ssid_len;
+		os_memcpy(pos, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
+		pos += hapd->conf->ssid.ssid_len;
+#ifdef CONFIG_TESTING_OPTIONS
+	} else {
+		*pos++ = hapd->fakessid_len;
+		os_memcpy(pos, hapd->fakessid, hapd->fakessid_len);
+		pos += hapd->fakessid_len;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Supported rates */
 	pos = hostapd_eid_supp_rates(hapd, pos);
@@ -1816,6 +1827,14 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 
 	/* SSID */
 	*pos++ = WLAN_EID_SSID;
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->fakessid_len != 0) {
+		printf("\n>>> Simulating MC-MITM: Overwriting SSID in outgoing Beacon frames\n\n");
+		*pos++ = hapd->fakessid_len;
+		os_memcpy(pos, hapd->fakessid, hapd->fakessid_len);
+		pos += hapd->fakessid_len;
+	} else
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (hapd->conf->ignore_broadcast_ssid == 2) {
 		/* clear the data, but keep the correct length of the SSID */
 		*pos++ = hapd->conf->ssid.ssid_len;

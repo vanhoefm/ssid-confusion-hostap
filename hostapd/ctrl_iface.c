@@ -2406,6 +2406,32 @@ static int hostapd_ctrl_get_pmk(struct hostapd_data *hapd, const char *cmd,
 }
 
 
+static int hostapd_ctrl_fakessid(struct hostapd_data *hapd, const char *ssid)
+{
+	if (strlen(ssid) > 31) {
+		wpa_printf(MSG_DEBUG, "Too long fake SSID %s", ssid);
+		return -1;
+	}
+
+	// This alone will take care of probe responses
+	strcpy(hapd->fakessid, ssid);
+	hapd->fakessid_len = strlen(ssid);
+
+	// For the beacon we need to disable beacon protection and reload
+	// the beacon parameters to ther kernel.
+	ieee802_11_set_beacon(hapd);
+	if (hostapd_drv_set_key(hapd->conf->iface, hapd,
+				WPA_ALG_NONE,
+				broadcast_ether_addr,
+				hapd->last_bigtk_key_idx, 0, 0, NULL, 0,
+				NULL, 0,
+				KEY_FLAG_GROUP) < 0)
+		return -1;
+
+	return 0;
+}
+
+
 static int hostapd_ctrl_register_frame(struct hostapd_data *hapd,
 				       const char *cmd)
 {
@@ -3295,6 +3321,14 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 					      socklen_t fromlen)
 {
 	int reply_len, res;
+	int console = 0;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (os_strncmp(buf, "> ", 2) == 0) {
+		console = 1;
+		buf += 2;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	os_memcpy(reply, "OK\n", 3);
 	reply_len = 3;
@@ -3554,6 +3588,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "GET_PMK ", 8) == 0) {
 		reply_len = hostapd_ctrl_get_pmk(hapd, buf + 8, reply,
 						 reply_size);
+	} else if (os_strncmp(buf, "FAKESSID ", 9) == 0) {
+		if (hostapd_ctrl_fakessid(hapd, buf + 9))
+			reply_len = -1;
 	} else if (os_strncmp(buf, "REGISTER_FRAME ", 15) == 0) {
 		if (hostapd_ctrl_register_frame(hapd, buf + 16) < 0)
 			reply_len = -1;
@@ -3845,6 +3882,18 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		os_memcpy(reply, "FAIL\n", 5);
 		reply_len = 5;
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (console) {
+		if (reply_len + 2 >= reply_size)
+			reply = os_realloc(reply, reply_size + 2);
+
+		memmove(reply + 2, reply, reply_len);
+		reply[0] = '>';
+		reply[1] = ' ';
+		reply_len += 2;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	return reply_len;
 }

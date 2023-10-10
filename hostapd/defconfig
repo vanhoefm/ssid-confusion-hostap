@@ -48,7 +48,7 @@ CONFIG_LIBNL32=y
 CONFIG_RSN_PREAUTH=y
 
 # Support Operating Channel Validation
-#CONFIG_OCV=y
+CONFIG_OCV=y
 
 # Integrated EAP server
 CONFIG_EAP=y
@@ -78,31 +78,31 @@ CONFIG_EAP_TTLS=y
 #CONFIG_EAP_SIM=y
 
 # EAP-AKA for the integrated EAP server
-#CONFIG_EAP_AKA=y
+CONFIG_EAP_AKA=y
 
 # EAP-AKA' for the integrated EAP server
 # This requires CONFIG_EAP_AKA to be enabled, too.
-#CONFIG_EAP_AKA_PRIME=y
+CONFIG_EAP_AKA_PRIME=y
 
 # EAP-PAX for the integrated EAP server
-#CONFIG_EAP_PAX=y
+CONFIG_EAP_PAX=y
 
 # EAP-PSK for the integrated EAP server (this is _not_ needed for WPA-PSK)
-#CONFIG_EAP_PSK=y
+CONFIG_EAP_PSK=y
 
 # EAP-pwd for the integrated EAP server (secure authentication with a password)
-#CONFIG_EAP_PWD=y
+CONFIG_EAP_PWD=y
 
 # EAP-SAKE for the integrated EAP server
-#CONFIG_EAP_SAKE=y
+CONFIG_EAP_SAKE=y
 
 # EAP-GPSK for the integrated EAP server
-#CONFIG_EAP_GPSK=y
+CONFIG_EAP_GPSK=y
 # Include support for optional SHA256 cipher suite in EAP-GPSK
-#CONFIG_EAP_GPSK_SHA256=y
+CONFIG_EAP_GPSK_SHA256=y
 
 # EAP-FAST for the integrated EAP server
-#CONFIG_EAP_FAST=y
+CONFIG_EAP_FAST=y
 
 # EAP-TEAP for the integrated EAP server
 # Note: The current EAP-TEAP implementation is experimental and should not be
@@ -122,13 +122,13 @@ CONFIG_EAP_TTLS=y
 #CONFIG_WPS_NFC=y
 
 # EAP-IKEv2
-#CONFIG_EAP_IKEV2=y
+CONFIG_EAP_IKEV2=y
 
 # Trusted Network Connect (EAP-TNC)
 #CONFIG_EAP_TNC=y
 
 # EAP-EKE for the integrated EAP server
-#CONFIG_EAP_EKE=y
+CONFIG_EAP_EKE=y
 
 # PKCS#12 (PFX) support (used to read private key and certificate file from
 # a file that usually has extension .p12 or .pfx)
@@ -166,10 +166,10 @@ CONFIG_IPV6=y
 #CONFIG_IEEE80211BE=y
 
 # Simultaneous Authentication of Equals (SAE), WPA3-Personal
-#CONFIG_SAE=y
+CONFIG_SAE=y
 
 # SAE Public Key, WPA3-Personal
-#CONFIG_SAE_PK=y
+CONFIG_SAE_PK=y
 
 # Remove debugging code that is printing out debug messages to stdout.
 # This can be used to reduce the size of the hostapd considerably if debugging
@@ -334,7 +334,7 @@ CONFIG_IPV6=y
 # connect to this hostapd. These options allow, for example, to drop a
 # certain percentage of probe requests or auth/(re)assoc frames.
 #
-#CONFIG_TESTING_OPTIONS=y
+CONFIG_TESTING_OPTIONS=y
 
 # Automatic Channel Selection
 # This will allow hostapd to pick the channel automatically when channel is set

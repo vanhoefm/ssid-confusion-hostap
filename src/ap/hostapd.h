@@ -373,6 +373,9 @@ struct hostapd_data {
 #endif /* CONFIG_SAE */
 
 #ifdef CONFIG_TESTING_OPTIONS
+	char fakessid[32];
+	u8 fakessid_len;
+
 	unsigned int ext_mgmt_frame_handling:1;
 	unsigned int ext_eapol_frame_io:1;
 

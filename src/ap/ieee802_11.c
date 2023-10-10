@@ -5169,6 +5169,9 @@ static void handle_assoc(struct hostapd_data *hapd,
 	int delay_assoc = 0;
 #endif /* CONFIG_FILS */
 	int omit_rsnxe = 0;
+#ifdef CONFIG_TESTING_OPTIONS
+	u8 mitmbuffer[2048] = {0};
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_req) :
 				      sizeof(mgmt->u.assoc_req))) {
@@ -5375,6 +5378,23 @@ static void handle_assoc(struct hostapd_data *hapd,
 		left = res;
 	}
 #endif /* CONFIG_FILS */
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->fakessid_len != 0 && pos[0] == WLAN_EID_SSID &&
+	    pos[1] == hapd->fakessid_len &&
+	    memcmp(pos + 2, hapd->fakessid, hapd->fakessid_len) == 0) {
+		printf("\n>>> Simulating MC-MITM: Overwriting SSID of incoming Association Request\n\n");
+		mitmbuffer[0] = WLAN_EID_SSID;
+		mitmbuffer[1] = hapd->conf->ssid.ssid_len;
+
+		memcpy(mitmbuffer + 2, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
+		memcpy(mitmbuffer + 2 + hapd->conf->ssid.ssid_len,
+		       pos + 2 + hapd->fakessid_len, left - 2 - hapd->fakessid_len);
+
+		left = left - hapd->fakessid_len + hapd->conf->ssid.ssid_len;
+		pos = mitmbuffer;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* followed by SSID and Supported rates; and HT capabilities if 802.11n
 	 * is used */
