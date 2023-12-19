@@ -38,6 +38,9 @@ struct wpa_sm_ctx {
 	int (*get_bssid)(void *ctx, u8 *bssid);
 	int (*ether_send)(void *ctx, const u8 *dest, u16 proto, const u8 *buf,
 			  size_t len);
+#ifdef CONFIG_TESTING_OPTIONS
+	struct wpa_bss * (*get_current_bss)(void *ctx);
+#endif /* #ifdef CONFIG_TESTING_OPTIONS */
 	int (*get_beacon_ie)(void *ctx);
 	void (*cancel_auth_timeout)(void *ctx);
 	u8 * (*alloc_eapol)(void *ctx, u8 type, const void *data, u16 data_len,

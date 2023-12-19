@@ -243,6 +243,14 @@ static inline void wpa_sm_deauthenticate(struct wpa_sm *sm, u16 reason_code)
 	sm->ctx->deauthenticate(sm->ctx->ctx, reason_code);
 }
 
+#ifdef CONFIG_TESTING_OPTIONS
+static inline struct wpa_bss * wpa_sm_get_current_bss(struct wpa_sm *sm)
+{
+	WPA_ASSERT(sm->ctx->get_current_bss);
+	return sm->ctx->get_current_bss(sm->ctx->ctx);
+}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 static inline int wpa_sm_set_key(struct wpa_sm *sm, int link_id,
 				 enum wpa_alg alg, const u8 *addr, int key_idx,
 				 int set_tx, const u8 *seq, size_t seq_len,

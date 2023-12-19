@@ -33,6 +33,10 @@
 #include "wpa_i.h"
 #include "wpa_ie.h"
 
+#ifdef CONFIG_TESTING_OPTIONS
+#include "../../wpa_supplicant/bss.h"
+#endif /* CONFIG_TESTING_OPTIONS */
+
 
 static const u8 null_rsc[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -1856,6 +1860,150 @@ static int mlo_ieee80211w_set_keys(struct wpa_sm *sm,
 }
 
 
+#ifdef CONFIG_TESTING_OPTIONS
+static int check_mmie_mic(unsigned int mgmt_group_cipher,
+			  const u8 *igtk, size_t igtk_len,
+			  u8 *bssid, u16 beacon_int, u16 beacon_caps,
+			  const u8 *ies, size_t ies_len)
+{
+	u8 *buf;
+	u8 mic[16];
+	u16 fc;
+	int ret, mic_len;
+	struct ieee80211_hdr hdr;
+	size_t buf_len;
+
+	if (!mgmt_group_cipher || igtk_len < 16)
+		return -1;
+	mic_len = mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC ? 8 : 16;
+
+	if (ies_len < mic_len)
+		return -1;
+
+	// FC + 3 addresses + TSF + beacon_interval + capabilities + ies_len
+	buf_len = 2 + (3 * ETH_ALEN) + 8 + 2 + 2 + ies_len;
+	buf = os_malloc(buf_len);
+	if (buf == NULL)
+		return -1;
+
+	/* BIP AAD: FC(masked) A1 A2 A3 */
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.frame_control |= (WLAN_FC_STYPE_BEACON << 4);
+	fc = le_to_host16(hdr.frame_control);
+	WPA_PUT_LE16(buf, fc);
+	os_memset(buf + 2, 0xFF, ETH_ALEN);
+	os_memcpy(buf + 8, bssid, ETH_ALEN);
+	os_memcpy(buf + 14, bssid, ETH_ALEN);
+
+	fprintf(stderr, "GOT HERE: post-aad\n");
+
+	/* Timestamp field masked to zero */
+	os_memset(buf + 20, 0, 8);
+	WPA_PUT_LE16(buf + 28, beacon_int);
+	WPA_PUT_LE16(buf + 30, beacon_caps);
+
+	/* Frame body with MMIE MIC masked to zero */
+	os_memcpy(buf + 32, ies, ies_len);
+	os_memset(buf + buf_len - mic_len, 0, mic_len);
+
+	wpa_hexdump(MSG_INFO, "BIP: AAD|Body(masked)", buf, buf_len);
+	/* MIC = L(AES-128-CMAC(AAD || Frame Body(masked)), 0, 64) */
+	if (mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC) {
+		printf("Using omac1_aes_128");
+		ret = omac1_aes_128(igtk, buf, buf_len, mic);
+	} else if (mgmt_group_cipher == WPA_CIPHER_BIP_CMAC_256) {
+		ret = omac1_aes_256(igtk, buf, buf_len, mic);
+	} else if (mgmt_group_cipher == WPA_CIPHER_BIP_GMAC_128 ||
+		 mgmt_group_cipher == WPA_CIPHER_BIP_GMAC_256) {
+#if 0
+		u8 nonce[12], *npos;
+		const u8 *ipn;
+
+		ipn = ies + ies_len - mic_len - 6;
+
+		/* Nonce: A2 | IPN */
+		os_memcpy(nonce, bssid, ETH_ALEN);
+		npos = nonce + ETH_ALEN;
+		*npos++ = ipn[5];
+		*npos++ = ipn[4];
+		*npos++ = ipn[3];
+		*npos++ = ipn[2];
+		*npos++ = ipn[1];
+		*npos++ = ipn[0];
+
+		ret = aes_gmac(igtk, igtk_len, nonce, sizeof(nonce),
+			       buf, buf_len, mic);
+#else
+		wpa_hexdump(MSG_ERROR, "%s: BIP_GMAC is not supported",
+			    __FUNCTION__);
+		return -1;
+#endif
+	} else {
+		ret = -1;
+	}
+
+	if (ret >= 0 && os_memcmp(mic, ies + ies_len - mic_len, mic_len) != 0) {
+		wpa_hexdump(MSG_INFO, "Expected MMIE MIC", mic, mic_len);
+		wpa_hexdump(MSG_INFO, "Received MMIE MIC", ies + ies_len - mic_len, mic_len);
+		ret = -1;
+	}
+
+	os_free(buf);
+	return ret;
+}
+
+
+static int verify_preauth_beacon(struct wpa_sm *sm,
+				 struct wpa_eapol_ie_parse *ie)
+{
+	const struct wpa_bigtk_kde *bigtk;
+	u16 keyidx;
+	struct wpa_bss *bss;
+	const u8 *ies;
+	size_t keylen;
+
+	if (!ie->bigtk || !sm->beacon_prot) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+			"Skipping pre-auth beacon check, bigtk=%d beacon_port=%d",
+			!!ie->bigtk, !!sm->beacon_prot);
+		return 0;
+	}
+
+	keylen = wpa_cipher_key_len(sm->mgmt_group_cipher);
+	if (ie->bigtk_len != WPA_BIGTK_KDE_PREFIX_LEN + keylen) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING, "BIGTK had unexpected length!");
+		return -1;
+	}
+
+	bigtk = (const struct wpa_bigtk_kde *) ie->bigtk;
+	keyidx = WPA_GET_LE16(bigtk->keyid);
+
+	// TODO: We want to avoid using "struct wpa_bss" in this file...
+	bss = wpa_sm_get_current_bss(sm);
+	ies = wpa_bss_ie_ptr(bss); // this returns bss->ies
+
+	const u8 *mmie = wpa_bss_get_ie(bss, WLAN_EID_MMIE);
+	if (mmie == NULL) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING, "Pre-auth IEs had no MMIE! Was a beacon captured?");
+		return -1;
+	}
+
+	// TODO: keyidx verify
+
+	wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "Pre-auth beacon IEs to verify",
+		bss->ies, bss->ie_len);
+	if (check_mmie_mic(sm->mgmt_group_cipher, bigtk->bigtk, keylen,
+			   bss->bssid, bss->beacon_int, bss->caps,
+			   bss->ies, bss->ie_len) < 0) {
+		wpa_hexdump(MSG_WARNING, "Pre-auth beacon had an invalid MMIE!");
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+
 static int ieee80211w_set_keys(struct wpa_sm *sm,
 			       struct wpa_eapol_ie_parse *ie)
 {
@@ -2624,6 +2772,22 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 			"RSN: Failed to configure GTK");
 		goto failed;
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (!mlo && verify_preauth_beacon(sm, &ie) < 0) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
+			"RSN: Failed to verify pre-auth beacon");
+		goto failed;
+	} else if (mlo) {
+		// When using Multi-Link Operation, the AP will send (B)(I)GTKs
+		// for each link. So to implement this, we would have to figure
+		// out which BIGTK to use, and then verify the beacon using that.
+		// For this proof-of-concept, we stick to non-MLO networks.
+		wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,
+			"RSN: Verifying pre-auth beacon not supported with MLO");
+		goto failed;
+	}
+#endif
 
 	if ((mlo && mlo_ieee80211w_set_keys(sm, &ie) < 0) ||
 	    (!mlo && ieee80211w_set_keys(sm, &ie) < 0)) {

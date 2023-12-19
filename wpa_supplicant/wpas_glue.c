@@ -394,12 +394,11 @@ static void wpa_supplicant_notify_eapol_done(void *ctx)
 
 #ifndef CONFIG_NO_WPA
 
-static int wpa_get_beacon_ie(struct wpa_supplicant *wpa_s)
+static struct wpa_bss * wpa_supplicant_get_current_bss(void *ctx)
 {
-	int ret = 0;
-	struct wpa_bss *curr = NULL, *bss;
+	struct wpa_supplicant *wpa_s = ctx;
+	struct wpa_bss *bss;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
-	const u8 *ie;
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (os_memcmp(bss->bssid, wpa_s->bssid, ETH_ALEN) != 0)
@@ -407,18 +406,25 @@ static int wpa_get_beacon_ie(struct wpa_supplicant *wpa_s)
 		if (ssid == NULL ||
 		    ((bss->ssid_len == ssid->ssid_len &&
 		      os_memcmp(bss->ssid, ssid->ssid, ssid->ssid_len) == 0) ||
-		     ssid->ssid_len == 0)) {
-			curr = bss;
-			break;
-		}
+		     ssid->ssid_len == 0))
+			return bss;
 #ifdef CONFIG_OWE
 		if (ssid && (ssid->key_mgmt & WPA_KEY_MGMT_OWE) &&
-		    (bss->flags & WPA_BSS_OWE_TRANSITION)) {
-			curr = bss;
-			break;
-		}
+		    (bss->flags & WPA_BSS_OWE_TRANSITION))
+			return bss;
 #endif /* CONFIG_OWE */
 	}
+
+	return NULL;
+}
+
+static int wpa_get_beacon_ie(struct wpa_supplicant *wpa_s)
+{
+	int ret = 0;
+	struct wpa_bss *curr = NULL;
+	const u8 *ie;
+
+	curr = wpa_supplicant_get_current_bss(wpa_s);
 
 	if (curr) {
 		ie = wpa_bss_get_vendor_ie(curr, WPA_IE_VENDOR_TYPE);
@@ -1433,6 +1439,9 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->get_network_ctx = wpa_supplicant_get_network_ctx;
 	ctx->get_bssid = wpa_supplicant_get_bssid;
 	ctx->ether_send = _wpa_ether_send;
+#ifdef CONFIG_TESTING_OPTIONS
+	ctx->get_current_bss = wpa_supplicant_get_current_bss;
+#endif /* CONFIG_TESTING_OPTIONS */
 	ctx->get_beacon_ie = wpa_supplicant_get_beacon_ie;
 	ctx->alloc_eapol = _wpa_alloc_eapol;
 	ctx->cancel_auth_timeout = _wpa_supplicant_cancel_auth_timeout;

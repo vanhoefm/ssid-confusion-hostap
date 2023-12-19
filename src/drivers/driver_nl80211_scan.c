@@ -821,8 +821,29 @@ nl80211_parse_bss_info(struct wpa_driver_nl80211_data *drv,
 		pos += ie_len;
 	}
 	r->beacon_ie_len = beacon_ie_len;
-	if (beacon_ie)
+	if (beacon_ie) {
+#ifdef CONFIG_TESTING_OPTIONS
+		// Note:
+		// * If we want to capture a reference beacon, then the connection
+		//   process will be slower because we have to wait for a beacon!
+		// * An alternative is to save the elements in a probe response, and
+		//   later compare this to the first (authenticated) beacon.
+		//   One downside is that the first authenticated beacon might only
+		//   arrive after already being connected.
+		// * For now we can fall back to passive scanning, so that we know
+		//   that we have a reference beacon to work with.
+
+		// Note 2:
+		// * Here the IEs are saved to the end of `struct wpa_scan_res`.
+		// * In the function `wpa_bss_add` the IEs then seem to be copied
+		//   to the end of `struct wpa_bss`.
+		// * In the pre-auth beacon verification, we then get the IEs from
+		//   the `struct wpa_bss` object.
+		wpa_printf(MSG_WARNING,
+			   "Saving beacon Information Elements from scan result\n");
+#endif
 		os_memcpy(pos, beacon_ie, beacon_ie_len);
+	}
 
 	if (bss[NL80211_BSS_STATUS]) {
 		enum nl80211_bss_status status;
