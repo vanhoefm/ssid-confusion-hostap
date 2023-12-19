@@ -3618,8 +3618,18 @@ static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos)
 			  NULL, 0);
 	forced_memzero(&igtk, sizeof(igtk));
 
+#ifndef CONFIG_TESTING_OPTIONS
 	if (!conf->beacon_prot)
 		return pos;
+#else
+	if (!conf->beacon_prot) {
+		wpa_printf(MSG_WARNING,
+			   "Beacon protection disabled, not sending BIGTK to the client");
+		return pos;
+	}
+	wpa_printf(MSG_WARNING,
+		   "Beacon protection enabled, sending BIGTK to the client");
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	bigtk.keyid[0] = gsm->GN_bigtk;
 	bigtk.keyid[1] = 0;

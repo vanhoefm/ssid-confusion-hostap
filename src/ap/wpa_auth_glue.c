@@ -451,6 +451,14 @@ static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 	struct hostapd_data *hapd = ctx;
 	const char *ifname = hapd->conf->iface;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (wpa_alg_bip(alg) && (idx == 6 || idx == 7) && hapd->fakessid_len != 0) {
+		wpa_printf(MSG_WARNING,
+			   "Not installing new BIGTK due to advertising of fake SSID\n");
+		return 0;
+	}
+#endif
+
 	if (vlan_id > 0) {
 		ifname = hostapd_get_vlan_id_ifname(hapd->conf->vlan, vlan_id);
 		if (!ifname) {
