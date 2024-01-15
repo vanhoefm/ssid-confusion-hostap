@@ -2406,6 +2406,25 @@ static int hostapd_ctrl_get_pmk(struct hostapd_data *hapd, const char *cmd,
 }
 
 
+static int hostapd_ctrl_changessid(struct hostapd_data *hapd, const char *ssid)
+{
+	if (strlen(ssid) > 31) {
+		wpa_printf(MSG_DEBUG, "Too long SSID %s", ssid);
+		return -1;
+	}
+
+	// This alone will take care of probe responses
+	hapd->conf->ssid.ssid_len = strlen(ssid);
+	memcpy(hapd->conf->ssid.ssid, ssid, hapd->conf->ssid.ssid_len);
+
+	// Reload the beacon parameters (with new SSID) to the kernel.
+	ieee802_11_set_beacon(hapd);
+	wpa_printf(MSG_DEBUG, ">>> Configured new SSID %s", ssid);
+
+	return 0;
+}
+
+
 static int hostapd_ctrl_fakessid(struct hostapd_data *hapd, const char *ssid)
 {
 	if (strlen(ssid) > 31) {
@@ -3596,6 +3615,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "GET_PMK ", 8) == 0) {
 		reply_len = hostapd_ctrl_get_pmk(hapd, buf + 8, reply,
 						 reply_size);
+	} else if (os_strncmp(buf, "CHANGESSID ", 11) == 0) {
+		if (hostapd_ctrl_changessid(hapd, buf + 11))
+			reply_len = -1;
 	} else if (os_strncmp(buf, "FAKESSID ", 9) == 0) {
 		if (hostapd_ctrl_fakessid(hapd, buf + 9))
 			reply_len = -1;
