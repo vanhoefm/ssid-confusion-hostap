@@ -2420,17 +2420,21 @@ static int hostapd_ctrl_fakessid(struct hostapd_data *hapd, const char *ssid)
 	// For the beacon we need to disable beacon protection and reload
 	// the beacon parameters (with new SSID) to the kernel.
 	ieee802_11_set_beacon(hapd);
-	if (hostapd_drv_set_key(hapd->conf->iface, hapd,
-				WPA_ALG_NONE,
-				broadcast_ether_addr,
-				hapd->last_bigtk_key_idx, 0, 0, NULL, 0,
-				NULL, 0,
-				KEY_FLAG_GROUP) < 0) {
-		wpa_printf(MSG_ERROR, "Failed to remove BIGTK");
-		return -1;
+	if (hapd->last_bigtk_len > 0) {
+		if (hostapd_drv_set_key(hapd->conf->iface, hapd,
+					WPA_ALG_NONE,
+					broadcast_ether_addr,
+					hapd->last_bigtk_key_idx, 0, 0, NULL, 0,
+					NULL, 0,
+					KEY_FLAG_GROUP) < 0) {
+			wpa_printf(MSG_ERROR, "Failed to remove BIGTK");
+			return -1;
+		} else {
+			wpa_printf(MSG_DEBUG, ">>> Removed BIGTK");
+		}
 	}
 
-	wpa_printf(MSG_DEBUG, "Configured new SSID %s and removed BIGTK", ssid);
+	wpa_printf(MSG_DEBUG, ">>> Configured new SSID %s", ssid);
 
 	return 0;
 }

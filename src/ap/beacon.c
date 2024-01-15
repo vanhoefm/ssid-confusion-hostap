@@ -658,12 +658,12 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 #ifdef CONFIG_TESTING_OPTIONS
 	if (hapd->fakessid_len == 0) {
 #endif /* CONFIG_TESTING_OPTIONS */
-		printf("\n>>> Simulating MC-MITM: Overwriting SSID of outgoing Probe Response\n\n");
 		*pos++ = hapd->conf->ssid.ssid_len;
 		os_memcpy(pos, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
 		pos += hapd->conf->ssid.ssid_len;
 #ifdef CONFIG_TESTING_OPTIONS
 	} else {
+		printf(">>> Simulating attack: Overwriting SSID of outgoing Probe Response\n");
 		*pos++ = hapd->fakessid_len;
 		os_memcpy(pos, hapd->fakessid, hapd->fakessid_len);
 		pos += hapd->fakessid_len;
@@ -1829,7 +1829,7 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	*pos++ = WLAN_EID_SSID;
 #ifdef CONFIG_TESTING_OPTIONS
 	if (hapd->fakessid_len != 0) {
-		printf("\n>>> Simulating MC-MITM: Overwriting SSID in outgoing Beacon frames\n\n");
+		printf(">>> Simulating attack: Overwriting SSID in outgoing Beacon frames\n");
 		*pos++ = hapd->fakessid_len;
 		os_memcpy(pos, hapd->fakessid, hapd->fakessid_len);
 		pos += hapd->fakessid_len;

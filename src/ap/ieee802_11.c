@@ -5383,7 +5383,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 	if (hapd->fakessid_len != 0 && pos[0] == WLAN_EID_SSID &&
 	    pos[1] == hapd->fakessid_len &&
 	    memcmp(pos + 2, hapd->fakessid, hapd->fakessid_len) == 0) {
-		printf("\n>>> Simulating MC-MITM: Overwriting SSID of incoming Association Request\n\n");
+		printf(">>> Simulating attack: Overwriting SSID of incoming Association Request\n");
 		mitmbuffer[0] = WLAN_EID_SSID;
 		mitmbuffer[1] = hapd->conf->ssid.ssid_len;
 
