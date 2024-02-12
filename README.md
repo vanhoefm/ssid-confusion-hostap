@@ -84,3 +84,51 @@ Now configure the IP address for `wlan0` and start dnsmasq:
 Note that handing out an IP address is sufficient in most cases. In case
 a client requires full Internet access, you will also have to configure
 Internet forwarding and NAT.
+
+## Defense Proof-of-Concept
+
+The `wpa_supplicant` version in this repository can save a reference beacon
+while connecting, and in the 4-way handshake, will verify the authenticity of
+this reference beacon. If the authenticity cannot be verified, the handshake
+will be aborted, and the client will disconnect.
+
+To enable this defense, include `CONFIG_TESTING_OPTIONS=y` in the `.config`
+file when building `wpa_supplicant`.
+
+You can use the following `client.conf`:
+
+	ctrl_interface=wpaspy_ctrl
+	passive_scan=1
+	sae_pwe=0
+	
+	network={
+	       ssid="changedssid"
+	       psk="abcdefgh"
+	       key_mgmt=SAE
+	
+	       pairwise=CCMP
+	       group=CCMP
+	
+	       scan_freq=2412
+	       ieee80211w=2
+	       beacon_prot=1
+	}
+
+Notice that passive scanning is being used to ensure the client has
+a copy of the beacon before connecting.
+
+When executing `wpa_supplicant` with extra debug output using the `-dd`
+flags you will notice the following relevant debug output lines:
+
+	Saving beacon Information Elements from scan result
+	...
+ 	Pre-auth beacon IEs to verify
+
+This last debug message is essential. When this message is shown, you
+know that the authenticity of the beacon is being verified.
+
+Note that Multi-Link Operation networks are not supported. In case the
+AP changes the BIGTK between when the client captured the reference
+beacon and the transmission of the BIGTK in the 4-way handshake, the
+check will fail, and the client will disconnect. In this
+proof-of-concept the BIP_GMAC algorithm is also not supported.
