@@ -5,8 +5,8 @@
 You can test the standard attack using a single Wi-Fi dongle using our modified Hostapd.
 This simulates the MC-MitM attack that would be present in a real attack.
 Note that the **full MC-MitM experiment**, as used in the paper to verify an end-to-endattack,
-is available in the [mc-mitcm](mc-mitm-ssid) directory. The below modified Hostapd is to
-more easily test whether clients are vulnerable.
+is available in the [mc-mitm](mc-mitm-ssid/README.md) directory. The below modified Hostapd
+is to more easily test whether clients are vulnerable.
 
 To perform the standard attack test, first create the following example `hostapd_test.conf` configuration:
 
