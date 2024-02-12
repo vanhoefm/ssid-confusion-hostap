@@ -1,0 +1,10 @@
+
+# Wildcard for all other identities
+* PEAP
+# Phase 2 (tunnelled within EAP-PEAP or EAP-TTLS) users
+"test1" MSCHAPV2 "password" [2]
+
+# Wildcard for all other identities
+* PEAP
+# Phase 2 (tunnelled within EAP-PEAP or EAP-TTLS) users
+"user" MSCHAPV2 "password"	[2]
