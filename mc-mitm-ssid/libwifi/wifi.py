@@ -643,7 +643,7 @@ def create_msdu_subframe(src, dst, payload, last=False):
 	return p / payload / Raw(padding)
 
 def find_network(iface, ssid, opened_socket):
-	log(STATUS, "Searching for target network...")
+	log(STATUS, f"Searching for target network {ssid}")
 	for chan in [None, 1, 6, 11, 3, 8, 2, 7, 4, 10, 5, 9, 12, 13]:
 		# We first search on the current channel that the network card is on
 		if chan != None:
@@ -659,7 +659,6 @@ def find_network(iface, ssid, opened_socket):
 		# Even though we capture the beacon we might still be on another channel,
 		# so it's important to explicitly switch to the correct channel.
 		actual_chan = orb(get_element(ps[0], IEEE_TLV_TYPE_CHANNEL).info)
-		print("actual channel: " + str(actual_chan))
 		set_channel(iface, actual_chan)
 
 		# Return the beacon that we captured

