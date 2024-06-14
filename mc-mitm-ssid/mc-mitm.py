@@ -668,7 +668,7 @@ class McMitm():
 			return
 		self.apmac = self.beacon.addr2
 		self.old_beacon = self.beacon.copy()
-		new_ssid = Dot11Elt(ID='SSID', info="goodnetwork", len=11)
+		new_ssid = Dot11Elt(ID='SSID', info=TRUSTED_NET, len=len(TRUSTED_NET))
 		self.beacon[Dot11Elt] = new_ssid / self.beacon[Dot11EltRates]
 
 		self.netconfig = NetworkConfig()
