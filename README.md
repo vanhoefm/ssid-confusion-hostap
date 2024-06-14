@@ -132,3 +132,28 @@ AP changes the BIGTK between when the client captured the reference
 beacon and the transmission of the BIGTK in the 4-way handshake, the
 check will fail, and the client will disconnect. In this
 proof-of-concept the BIP_GMAC algorithm is also not supported.
+
+## Troubleshooting
+
+If you get the error `UNKNOWN COMMAND` after executing the "FAKESSID changedssid"
+command, then double-check that `CONFIG_TESTING_OPTIONS=y` is set in the `defconfig`
+and `.config` file. Otherwise, hostapd will be compiled without supporting this command.
+
+## FILS Clarification
+
+There are two variants of FILS authentication: public and shared key. In practice,
+the public key variant has limited support, e.g., Linux's hostap supports FILS
+shared key but not public key, and the Wi-Fi Alliance only offers certification
+programs for FILS shared key.
+
+When using FILS shared key, the initial connection uses 802.1X and is therefore
+vulnerable. During this initial connection a shared key can be established to more
+quickly reconnect in the future. If there is already a shared key between the
+client and AP, or if FILS public key is being used, authentication happens using
+the FILS authentication protocol. When using the FILS authentication protocol,
+part of the association response is encrypted and the additional authenticated
+data includes the SSID. This means the adversary cannot rewrite the SSID in the
+association request, causing the attack to fail. However, since FILS public key
+does not appear to be common in practice, and since an attacker can typically
+make a victim fall back to performing an initial 802.1X handshake when using
+FILS shared key, we do consider FILS to be vulnerable.

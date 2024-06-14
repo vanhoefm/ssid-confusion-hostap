@@ -1,0 +1,6 @@
+"psk user"	PSK	"unknown"
+"psk.user@example.com"	PSK	0123456789abcdef0123456789abcdef
+
+# Phase 2 (tunnelled within EAP-PEAP or EAP-TTLS) users
+#"not anonymous"	MSCHAPV2	"password"	[2]
+
