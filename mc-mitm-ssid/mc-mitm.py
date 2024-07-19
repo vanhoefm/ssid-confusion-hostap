@@ -69,18 +69,19 @@ def get_eapol_msgnum(p):
 	if not EAPOL in p: return 0
 
 	keyinfo = raw(p[EAPOL])[5:7]
-	flags = struct.unpack(">H", keyinfo)[0]
-	if flags & FLAG_PAIRWISE:
-		# 4-way handshake
-		if flags & FLAG_ACK:
-			# sent by server
-			if flags & FLAG_SECURE: return 3
-			else: return 1
-		else:
-			# sent by server
-			keydatalen = struct.unpack(">H", raw(p[EAPOL])[97:99])[0]
-			if keydatalen == 0: return 4
-			else: return 2
+	if len(keyinfo) == 2:
+		flags = struct.unpack(">H", keyinfo)[0]
+		if flags & FLAG_PAIRWISE:
+			# 4-way handshake
+			if flags & FLAG_ACK:
+				# sent by server
+				if flags & FLAG_SECURE: return 3
+				else: return 1
+			else:
+				# sent by server
+				keydatalen = struct.unpack(">H", raw(p[EAPOL])[97:99])[0]
+				if keydatalen == 0: return 4
+				else: return 2
 
 	return 0
 
