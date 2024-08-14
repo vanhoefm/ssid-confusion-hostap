@@ -7,3 +7,4 @@ wpaspy/build
 tags
 build/
 venv/
+.idea/
